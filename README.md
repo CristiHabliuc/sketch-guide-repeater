@@ -6,7 +6,7 @@ You can quickly fill the artboard with guides every x pixels, with or without ma
 ## Installation
 Install this plugin by downloading this repository and double click the `GuideRepeater.sketchplugin` component.
 
-Select the artboard. Go to the plugins menu and select `Guide Repeater -> Generate Guides` or use keyboard shortcuts (see below).
+Select the artboard. Go to the plugins menu and select `Guide Repeater -> Generate Guides` or use this keyboard shortcut: `⌘ - ⌥ - G` (cmd+option+g).
 A modal will appear where you can define the setup for the guides you aim to create.
 
 ## Mentions
