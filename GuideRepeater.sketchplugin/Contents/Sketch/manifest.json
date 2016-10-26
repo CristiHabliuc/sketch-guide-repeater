@@ -1,0 +1,25 @@
+{
+  "name": "Guide Repeater",
+  "description": "Fill an artboard with repeating guides of fixed size",
+  "author": "seenchris",
+  "homepage": "https://github.com/seenchris/sketch-guide-repeater",
+  "version": 1.0,
+  "identifier": "com.github.seenchris.sketch-guide-repeater",
+  "updateURL": "https://github.com/seenchris/sketch-guide-repeater",
+  "compatibleVersion": 3,
+  "bundleVersion": 1,
+  "commands": [
+    {
+      "name": "Generate Guides",
+      "identifier": "fixed-size-guides",
+      "shortcut": "cmd alt g",
+      "script": "GuideRepeater.coscript",
+      "handler": "generateGuides"
+    }
+  ],
+  "menu": {
+    "items": [
+      "fixed-size-guides"
+    ]
+  }
+}

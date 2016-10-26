@@ -1,0 +1,365 @@
+/**
+ * Guide Repeater 1.0
+ *
+ * Copyright © 2016 Cristi Habliuc https://github.com/seenchris
+ * and licenced under the MIT licence. All rights not explicitly
+ * granted in the MIT license are reserved. See the included
+ * LICENSE file for more details.
+ *
+ * https://github.com/seenchris/
+ * https://twitter.com/zencristi
+ */
+
+var all_abs;
+var last_ab_index;
+var go_next = 1; // if 0 then go to previous;
+var pluginName = 'Guide Repeater';
+
+function createSettingsPanel(artboard, msg, selectedItemIndex, doc){
+  selectedItemIndex = selectedItemIndex || 0
+  var formatter = [[NSNumberFormatter alloc] init];
+  [formatter setNumberStyle:NSNumberFormatterDecimalStyle];
+
+  var selectOptions = ['No guides on first & last', 'Guide on first & last gutters']
+  var accessoryView = NSView.alloc().initWithFrame(NSMakeRect(0,20,278,160))
+
+  var checkBox  = NSButton.alloc().initWithFrame(NSMakeRect(0,130,18,18))
+  [checkBox setButtonType:NSSwitchButton]
+  [checkBox setBezelStyle:0]
+
+  var checkBoxLabel = NSTextField.alloc().initWithFrame(NSMakeRect(20,128,270,20))
+  checkBoxLabel.setStringValue('Remove any existing guides');
+  [checkBoxLabel setDrawsBackground:false];
+  [checkBoxLabel setEditable:false];
+  [checkBoxLabel setEditable:false];
+  [checkBoxLabel setSelectable:false];
+  [checkBoxLabel setBezeled:false];
+
+  var inputColumnWidthLabel = NSTextField.alloc().initWithFrame(NSMakeRect(0,98,210,20))
+  inputColumnWidthLabel.setStringValue('Column Width (px)')
+  [inputColumnWidthLabel setDrawsBackground:false];
+  [inputColumnWidthLabel setEditable:false];
+  [inputColumnWidthLabel setSelectable:false];
+  [inputColumnWidthLabel setBezeled:false];
+  [inputColumnWidthLabel setFont:[NSFont systemFontOfSize:10]]]
+
+  var inputColumnGutterLabel = NSTextField.alloc().initWithFrame(NSMakeRect(210,98,70,20))
+  inputColumnGutterLabel.setStringValue('Gutter (px)')
+  [inputColumnGutterLabel setDrawsBackground:false];
+  [inputColumnGutterLabel setEditable:false];
+  [inputColumnGutterLabel setSelectable:false];
+  [inputColumnGutterLabel setBezeled:false];
+  [inputColumnGutterLabel setFont:[NSFont systemFontOfSize:10]]]
+
+  var inputColumnWidth = NSTextField.alloc().initWithFrame(NSMakeRect(0,80,200,25))
+  inputColumnWidth.setStringValue('0')
+  inputColumnWidth.setFormatter(formatter)
+
+  var inputColumnGutter = NSTextField.alloc().initWithFrame(NSMakeRect(210,80,55,25))
+  inputColumnGutter.setStringValue('0')
+  inputColumnGutter.setFormatter(formatter)
+
+  var inputRowHeightLabel = NSTextField.alloc().initWithFrame(NSMakeRect(0,58,210,20))
+  inputRowHeightLabel.setStringValue('Row Height (px)')
+  [inputRowHeightLabel setDrawsBackground:false];
+  [inputRowHeightLabel setEditable:false];
+  [inputRowHeightLabel setSelectable:false];
+  [inputRowHeightLabel setBezeled:false];
+  [inputRowHeightLabel setFont:[NSFont systemFontOfSize:10]]]
+
+  var inputRowGutterLabel = NSTextField.alloc().initWithFrame(NSMakeRect(210,58,70,20))
+  inputRowGutterLabel.setStringValue('Gutter (px)')
+  [inputRowGutterLabel setDrawsBackground:false];
+  [inputRowGutterLabel setEditable:false];
+  [inputRowGutterLabel setSelectable:false];
+  [inputRowGutterLabel setBezeled:false];
+  [inputRowGutterLabel setFont:[NSFont systemFontOfSize:10]]]
+
+  var inputRowHeight = NSTextField.alloc().initWithFrame(NSMakeRect(0,40,200,25))
+  inputRowHeight.setStringValue('0')
+  inputRowHeight.setFormatter(formatter)
+
+  var inputRowGutter = NSTextField.alloc().initWithFrame(NSMakeRect(210,40,55,25))
+  inputRowGutter.setStringValue('0')
+  inputRowGutter.setFormatter(formatter)
+
+  var orderSelect = NSComboBox.alloc().initWithFrame(NSMakeRect(0,0,268,28))
+  orderSelect.addItemsWithObjectValues(selectOptions)
+  orderSelect.selectItemAtIndex(selectedItemIndex)
+
+  accessoryView.addSubview(checkBoxLabel)
+  accessoryView.addSubview(checkBox)
+  accessoryView.addSubview(inputColumnWidthLabel)
+  accessoryView.addSubview(inputColumnWidth)
+  accessoryView.addSubview(inputColumnGutterLabel)
+  accessoryView.addSubview(inputColumnGutter)
+  accessoryView.addSubview(inputRowHeightLabel)
+  accessoryView.addSubview(inputRowHeight)
+  accessoryView.addSubview(inputRowGutterLabel)
+  accessoryView.addSubview(inputRowGutter)
+  accessoryView.addSubview(orderSelect)
+
+  // establish tab order
+  inputColumnWidth.nextKeyView = inputColumnGutter;
+  inputColumnGutter.nextKeyView = inputRowHeight;
+  inputRowHeight.nextKeyView = inputRowGutter;
+
+  var alert = NSAlert.alloc().init()
+  alert.informativeText =  "Set values accordingly";
+  alert.setMessageText(msg);
+  alert.addButtonWithTitle('Ok')
+  alert.addButtonWithTitle('Cancel')
+  alert.setAccessoryView(accessoryView)
+
+  var responseCode = alert.runModal()
+
+  var sel = orderSelect.indexOfSelectedItem()
+  var remove = 0;
+
+  if ([checkBox state]==NSOnState) {
+    remove = 1
+  }
+
+  var columnwidth = inputColumnWidth.intValue();
+  var columngutter = inputColumnGutter.intValue();
+  var rowheight = inputRowHeight.intValue();
+  var rowgutter = inputRowGutter.intValue();
+  var max_width = artboard.frame().width();
+  var max_height = artboard.frame().height();
+  var columncount = Math.floor(artboard.frame().width() / columnwidth)
+  var rowcount = Math.floor(artboard.frame().height() / rowheight)
+
+  var error = '';
+  if (columnwidth < 0) {
+    error += 'The col width should be a positive value';
+  } else if (rowheight < 0) {
+      error += 'The row height should be a positive value';
+  } else if (columngutter < 0) {
+      error += 'The col gutter should be a positive value or zero';
+  } else if (rowgutter < 0) {
+      error += 'The row gutter should be a positive value or zero';
+  } else if ((columnwidth + rowheight) == 0) {
+    error += 'Please specify values for at least columns or rows';
+  } else {
+    error = null;
+  }
+
+  // little validation
+  if (!error) {
+    return [responseCode, remove, columnwidth, columngutter, rowheight, rowgutter, sel]
+  } else {
+    [doc showMessage: error]
+  }
+}
+
+// helper func - borrowed from https://github.com/nadavsavio/sketch-plugins
+function get_previous_ab(current_ab) {
+  // takes artboard object and returns next artboard object in artboards array (or first if on the last one already)
+  // *** note that artboards array is built from bottom to top in the UI list of artboards
+
+  for (var i=0; i<=last_ab_index; i++) {
+    var test_ab = all_abs[i];
+    if (test_ab == current_ab) {
+      // if it's the first one then loop
+      if (i==last_ab_index) {
+        var k = 0;
+        var next_ab = all_abs[k];
+        return next_ab;
+      } else {
+        var k = i+1;
+        var next_ab = all_abs[k];
+        return next_ab;
+      }
+    }
+  }
+}
+
+function get_next_ab(current_ab) {
+  // takes artboard object and returns next artboard object in artboards array (or first if on the last one already)
+  // *** note that artboards array is built from bottom to top in the UI list of artboards
+
+  // loop through all artboards and see if each is the current one
+  for (var i=0; i<=last_ab_index; i++) {
+    var test_ab = all_abs[i];
+    if (test_ab == current_ab) {
+      // if it's the last one then loop
+      if (i==0) {
+        var k = last_ab_index;
+        var next_ab = all_abs[k];
+        return next_ab;
+      } else {
+        var k = i-1;
+        var next_ab = all_abs[k];
+        return next_ab;
+      }
+    }
+  }
+}
+
+function get_an_artboard(selection) {
+  // if there is a selection; make sure it's an artboard and, if not bump up to its artboard
+  current_ab = selection[0];
+  var current_class = [current_ab class];
+  while(current_ab && ([current_ab class] !== MSArtboardGroup)) {
+    current_ab.setIsSelected(0);
+    current_ab = [current_ab parentGroup];
+  }
+  current_ab.setIsSelected(1);
+  return current_ab;
+}
+
+function removeGuide(layer) {
+  var artboard = layer
+  horizontalGuides = [[artboard horizontalRulerData] numberOfGuides]
+  verticalGuides = [[artboard verticalRulerData] numberOfGuides]
+  while (verticalGuides > 0) {
+      [[artboard verticalRulerData] removeGuideAtIndex:0]
+      verticalGuides = [[artboard verticalRulerData] numberOfGuides]
+  }
+  while (horizontalGuides > 0) {
+    [[artboard horizontalRulerData] removeGuideAtIndex:0]
+    horizontalGuides = [[artboard horizontalRulerData] numberOfGuides]
+  }
+}
+
+function addGuide(artboard, horizontalGuides, verticalGuides) {
+  if (horizontalGuides) {
+    for (var p=0; p<=horizontalGuides.length-1; p++) {
+      [[artboard horizontalRulerData] addGuideWithValue:horizontalGuides[p]]]
+    }
+  }
+  if (verticalGuides) {
+    for (var p=0; p<=verticalGuides.length -1; p++) {
+      [[artboard verticalRulerData] addGuideWithValue:verticalGuides[p]]]
+    }
+  }
+}
+
+function guideCreator(artboard, doc) {
+  var rect = artboard.absoluteRect()
+  var settingsPanelResult = createSettingsPanel(artboard, 'Fixed-Size Guides for \n' + artboard.name()  + ' (' + rect.width() + 'x' + rect.height() + 'px)', 1, doc)
+  if (settingsPanelResult == nil) {
+    return;
+  }
+
+  if (settingsPanelResult[1] == 1) {
+    removeGuide(artboard);
+  }
+
+  int columnwidth = settingsPanelResult[2]
+  int colGutter = settingsPanelResult[3]
+  int rowheight = settingsPanelResult[4]
+  int rowGutter = settingsPanelResult[5]
+  int order = settingsPanelResult[6]
+  var max_width = artboard.frame().width();
+  var max_height = artboard.frame().height();
+
+  int columns = 0, rows = 0;
+  if (columnwidth > 0) {
+    columns = Math.floor(max_width / (columnwidth + colGutter*2))
+  }
+  if (rowheight > 0) {
+    rows = Math.floor(max_height / (rowheight + rowGutter*2))
+  }
+
+  if (rows > 1 || columns > 1) {
+    if (columns > 1) {
+      var colCoordinates = buildCoordinates(max_width, columnwidth, columns, colGutter, order)
+      addGuide(artboard, colCoordinates, null)
+    }
+
+    if (rows > 1) {
+      var rowCoordinates = buildCoordinates(max_height, rowheight, rows, rowGutter, order)
+      addGuide(artboard, null, rowCoordinates)
+    }
+
+    var created  = 0
+    if (rowCoordinates && rowCoordinates.length > 0) {
+      created = created + rowCoordinates.length
+    }
+    if (colCoordinates && colCoordinates.length > 0) {
+      created = created + colCoordinates.length
+    }
+
+    [doc showMessage: 'A total of ' + created + ' guides have been created.']
+  }
+}
+
+function buildCoordinates(max, width, count, gutterWidth, gutterOnFirstAndLast) {
+  int distance = 0;
+  var points = [];
+
+  var array = [[NSMutableArray alloc] init];
+
+  if (gutterOnFirstAndLast) {
+    // add the first gutter if the user wants it
+    [array addObject:0];
+  }
+
+  for (var i = 0; i < count; i++) {
+    if (gutterWidth > 0) {
+      distance += gutterWidth
+      [array addObject:distance];
+    }
+
+    distance += width;
+    [array addObject:distance];
+
+    if (gutterWidth > 0) {
+      if (i < count - 1 || gutterOnFirstAndLast) {
+        // add the gutter if it's not last or it's last and user wants it on last
+        distance += gutterWidth
+        [array addObject:distance];
+      }
+    }
+
+    if (distance > max) {
+      // enough points, we're already exceeding the artboard
+      break;
+    }
+  }
+
+  points = array;
+
+  return points;
+}
+
+var clearGuides = function(context) {
+  var doc =  context.document;
+  var selection = context.selection;
+
+  var alert = NSAlert.alloc().init()
+  alert.setMessageText('Remove all existing guides?');
+  alert.informativeText = 'Handle with care! This action cannot be undone.';
+  alert.addButtonWithTitle('Ok')
+  alert.addButtonWithTitle('Cancel')
+  var responseCode = alert.runModal()
+  var current_ab = get_an_artboard(selection);
+
+  if (responseCode == 1000) {
+    removeGuide(current_ab);
+  }
+}
+
+// entry function
+var generateGuides = function(context) {
+  var doc =  context.document;
+  var selection = context.selection;
+  var current_ab;
+  all_abs = [[doc currentPage] artboards];
+  last_ab_index = all_abs.count() - 1;
+  go_next = 1; // if 0 then go to previous;
+
+  if (all_abs.count() === 0) {
+    [doc showMessage: pluginName + ': No artboards found. Please have at least one before trying this.'];
+  } else {
+    // loop throu your current document - find one or many artboards - loop through them to
+    if (!(selection && selection.count()) || (selection.count()==0)) {
+      [doc showMessage: pluginName + ': Please select the artboard you want the guides created in.'];
+    } else {
+      // if there *is* a selection, then make sure it's an artboard
+      current_ab = get_an_artboard(selection);
+      guideCreator(current_ab, doc);
+    }
+  }
+}
